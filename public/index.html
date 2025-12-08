@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCenter Hardware Inventory</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ DataCenter Hardware Inventory</h1>
+            <p class="subtitle">Server Hardware & Equipment Management System</p>
+        </header>
+
+        <div class="controls">
+            <button id="addProductBtn" class="btn btn-primary">
+                <span>➕</span> Add New Product
+            </button>
+            <div class="filter-section">
+                <label for="categoryFilter">Filter by Category:</label>
+                <select id="categoryFilter" class="select-input">
+                    <option value="">All Categories</option>
+                    <option value="Rack Server">Rack Server</option>
+                    <option value="Storage">Storage</option>
+                    <option value="Networking">Networking</option>
+                    <option value="Power & Cooling">Power & Cooling</option>
+                    <option value="Rack & Accessories">Rack & Accessories</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="productGrid" class="product-grid">
+            <!-- Products will be dynamically loaded here -->
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Add New Product</h2>
+            <form id="productForm">
+                <div class="form-group">
+                    <label for="productName">Product Name *</label>
+                    <input type="text" id="productName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productCategory">Category *</label>
+                    <select id="productCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="Rack Server">Rack Server</option>
+                        <option value="Storage">Storage</option>
+                        <option value="Networking">Networking</option>
+                        <option value="Power & Cooling">Power & Cooling</option>
+                        <option value="Rack & Accessories">Rack & Accessories</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productSku">SKU *</label>
+                    <input type="text" id="productSku" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productQuantity">Quantity *</label>
+                        <input type="number" id="productQuantity" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="productPrice">Price ($) *</label>
+                        <input type="number" id="productPrice" step="0.01" min="0" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productManufacturer">Manufacturer</label>
+                    <input type="text" id="productManufacturer">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productSpecifications">Specifications</label>
+                    <textarea id="productSpecifications" rows="3"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quantity Update Modal -->
+    <div id="quantityModal" class="modal">
+        <div class="modal-content modal-small">
+            <span class="close" onclick="closeQuantityModal()">&times;</span>
+            <h2>Update Quantity</h2>
+            <div id="quantityProductName" class="modal-product-name"></div>
+            <form id="quantityForm">
+                <div class="form-group">
+                    <label for="newQuantity">New Quantity</label>
+                    <input type="number" id="newQuantity" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeQuantityModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
