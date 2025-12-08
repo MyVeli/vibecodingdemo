@@ -1,9 +1,10 @@
 {
   "name": "vibecodingdemo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "DataCenter Hardware Inventory Management System",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
