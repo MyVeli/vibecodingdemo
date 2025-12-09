@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Management - DataCenter Hardware Inventory</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Package Management</h1>
+            <p class="subtitle">Create and manage product packages</p>
+        </header>
+
+        <!-- Navigation Menu -->
+        <nav class="nav-menu">
+            <a href="index.html" class="nav-link">
+                <span>🖥️</span> Products
+            </a>
+            <a href="packages.html" class="nav-link active">
+                <span>📦</span> Packages
+            </a>
+        </nav>
+
+        <div class="controls">
+            <button id="addPackageBtn" class="btn btn-primary">
+                <span>➕</span> Create New Package
+            </button>
+        </div>
+
+        <div id="packageGrid" class="package-grid">
+            <!-- Packages will be dynamically loaded here -->
+        </div>
+    </div>
+
+    <!-- Add/Edit Package Modal -->
+    <div id="packageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Create New Package</h2>
+            <form id="packageForm">
+                <div class="form-group">
+                    <label for="packageName">Package Name *</label>
+                    <input type="text" id="packageName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="packageDescription">Description</label>
+                    <textarea id="packageDescription" rows="3" placeholder="Describe what this package includes..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="packagePrice">Package Price ($) *</label>
+                    <input type="number" id="packagePrice" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Package</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Products Modal -->
+    <div id="manageProductsModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeManageProductsModal()">&times;</span>
+            <h2 id="manageModalTitle">Manage Package Products</h2>
+            <div id="currentPackageName" class="package-info-header"></div>
+            
+            <div class="manage-products-container">
+                <!-- Current Products in Package -->
+                <div class="current-products-section">
+                    <h3>📋 Products in Package</h3>
+                    <div id="currentProductsList" class="current-products-list">
+                        <!-- Current products will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Add Products Section -->
+                <div class="add-products-section">
+                    <h3>➕ Add Products</h3>
+                    <div class="form-group">
+                        <label for="productSearch">Search Products:</label>
+                        <input type="text" id="productSearch" placeholder="Search by name or SKU...">
+                    </div>
+                    <div class="form-group">
+                        <label for="categoryFilterModal">Filter by Category:</label>
+                        <select id="categoryFilterModal" class="select-input">
+                            <option value="">All Categories</option>
+                            <option value="Rack Server">Rack Server</option>
+                            <option value="Storage">Storage</option>
+                            <option value="Networking">Networking</option>
+                            <option value="Power & Cooling">Power & Cooling</option>
+                            <option value="Rack & Accessories">Rack & Accessories</option>
+                        </select>
+                    </div>
+                    <div id="availableProductsList" class="available-products-list">
+                        <!-- Available products will be listed here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeManageProductsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Product Quantity Modal -->
+    <div id="updateProductQtyModal" class="modal">
+        <div class="modal-content modal-small">
+            <span class="close" onclick="closeUpdateQtyModal()">&times;</span>
+            <h2>Update Quantity</h2>
+            <div id="updateQtyProductName" class="modal-product-name"></div>
+            <form id="updateQtyForm">
+                <div class="form-group">
+                    <label for="productQtyInput">Quantity</label>
+                    <input type="number" id="productQtyInput" min="1" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeUpdateQtyModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="packages.js"></script>
+</body>
+</html>

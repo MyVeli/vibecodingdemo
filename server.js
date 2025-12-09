@@ -22,6 +22,7 @@ const db = new sqlite3.Database('./inventory.db', (err) => {
 
 // Initialize database schema and sample data
 function initDatabase() {
+  // Create products table
   db.run(`CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -33,12 +34,46 @@ function initDatabase() {
     specifications TEXT
   )`, (err) => {
     if (err) {
-      console.error('Error creating table:', err);
+      console.error('Error creating products table:', err);
+    }
+  });
+
+  // Create packages table
+  db.run(`CREATE TABLE IF NOT EXISTS packages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating packages table:', err);
+    }
+  });
+
+  // Create junction table for package-product relationships
+  db.run(`CREATE TABLE IF NOT EXISTS package_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    package_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE(package_id, product_id)
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating package_products table:', err);
     } else {
       // Check if we need to populate sample data
       db.get('SELECT COUNT(*) as count FROM products', (err, row) => {
         if (!err && row.count === 0) {
           populateSampleData();
+        }
+      });
+      // Check if we need to populate sample packages
+      db.get('SELECT COUNT(*) as count FROM packages', (err, row) => {
+        if (!err && row.count === 0) {
+          populateSamplePackages();
         }
       });
     }
@@ -79,6 +114,69 @@ function populateSampleData() {
   
   stmt.finalize();
   console.log('Sample data populated successfully');
+}
+
+// Populate sample packages
+function populateSamplePackages() {
+  const samplePackages = [
+    { 
+      name: 'Basic Web Server Bundle', 
+      description: 'Perfect starter package for small web hosting needs. Includes 1 rack server, basic networking, and power backup.',
+      price: 15800.00 
+    },
+    { 
+      name: 'Enterprise Storage Solution', 
+      description: 'Complete enterprise storage setup with high-capacity arrays, redundant networking, and comprehensive power protection.',
+      price: 128000.00 
+    },
+    { 
+      name: 'High-Performance Data Center Rack', 
+      description: 'Fully equipped rack with premium servers, redundant switches, enterprise storage, and complete power management. Ready for production deployment.',
+      price: 89500.00 
+    }
+  ];
+
+  const stmt = db.prepare(`INSERT INTO packages (name, description, price) VALUES (?, ?, ?)`);
+  
+  samplePackages.forEach(pkg => {
+    stmt.run(pkg.name, pkg.description, pkg.price);
+  });
+  
+  stmt.finalize(() => {
+    // Add products to packages
+    db.get('SELECT id FROM packages WHERE name = ?', ['Basic Web Server Bundle'], (err, pkg) => {
+      if (!err && pkg) {
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 1, 1)', [pkg.id]); // 1 PowerEdge Server
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 11, 1)', [pkg.id]); // 1 Cisco Nexus Switch
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 16, 2)', [pkg.id]); // 2 APC UPS
+      }
+    });
+
+    db.get('SELECT id FROM packages WHERE name = ?', ['Enterprise Storage Solution'], (err, pkg) => {
+      if (!err && pkg) {
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 6, 2)', [pkg.id]); // 2 NetApp Storage
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 8, 1)', [pkg.id]); // 1 HPE Nimble
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 12, 2)', [pkg.id]); // 2 Arista Switches
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 17, 3)', [pkg.id]); // 3 Eaton UPS
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 20, 1)', [pkg.id]); // 1 Rack
+      }
+    });
+
+    db.get('SELECT id FROM packages WHERE name = ?', ['High-Performance Data Center Rack'], (err, pkg) => {
+      if (!err && pkg) {
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 2, 2)', [pkg.id]); // 2 ProLiant Servers
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 4, 1)', [pkg.id]); // 1 Cisco UCS
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 7, 1)', [pkg.id]); // 1 Dell EMC Storage
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 11, 2)', [pkg.id]); // 2 Cisco Nexus
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 13, 1)', [pkg.id]); // 1 Juniper Switch
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 16, 4)', [pkg.id]); // 4 APC UPS
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 19, 2)', [pkg.id]); // 2 PDU
+        db.run('INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, 20, 1)', [pkg.id]); // 1 Rack
+      }
+    });
+
+    console.log('Sample packages populated successfully');
+  });
 }
 
 // REST API Endpoints
@@ -187,6 +285,186 @@ app.delete('/api/products/:id', (req, res) => {
       res.json({ message: 'Product deleted successfully' });
     }
   });
+});
+
+// ===== PACKAGE API ENDPOINTS =====
+
+// GET all packages with their products
+app.get('/api/packages', (req, res) => {
+  db.all('SELECT * FROM packages ORDER BY name', (err, packages) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+      // Get products for each package
+      const packagesWithProducts = [];
+      let completed = 0;
+
+      if (packages.length === 0) {
+        return res.json([]);
+      }
+
+      packages.forEach(pkg => {
+        db.all(`
+          SELECT p.*, pp.quantity as package_quantity 
+          FROM products p
+          JOIN package_products pp ON p.id = pp.product_id
+          WHERE pp.package_id = ?
+        `, [pkg.id], (err, products) => {
+          if (!err) {
+            packagesWithProducts.push({ ...pkg, products: products || [] });
+          }
+          completed++;
+          if (completed === packages.length) {
+            res.json(packagesWithProducts);
+          }
+        });
+      });
+    }
+  });
+});
+
+// GET single package by ID with products
+app.get('/api/packages/:id', (req, res) => {
+  db.get('SELECT * FROM packages WHERE id = ?', [req.params.id], (err, pkg) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else if (!pkg) {
+      res.status(404).json({ error: 'Package not found' });
+    } else {
+      // Get products for this package
+      db.all(`
+        SELECT p.*, pp.quantity as package_quantity 
+        FROM products p
+        JOIN package_products pp ON p.id = pp.product_id
+        WHERE pp.package_id = ?
+      `, [pkg.id], (err, products) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+        } else {
+          res.json({ ...pkg, products: products || [] });
+        }
+      });
+    }
+  });
+});
+
+// POST new package
+app.post('/api/packages', (req, res) => {
+  const { name, description, price } = req.body;
+  
+  if (!name || !price) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  db.run(
+    `INSERT INTO packages (name, description, price) VALUES (?, ?, ?)`,
+    [name, description || '', price],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+      } else {
+        res.json({ id: this.lastID, message: 'Package added successfully' });
+      }
+    }
+  );
+});
+
+// PUT update package
+app.put('/api/packages/:id', (req, res) => {
+  const { name, description, price } = req.body;
+  
+  if (!name || !price) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  db.run(
+    `UPDATE packages SET name = ?, description = ?, price = ? WHERE id = ?`,
+    [name, description || '', price, req.params.id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+      } else if (this.changes === 0) {
+        res.status(404).json({ error: 'Package not found' });
+      } else {
+        res.json({ message: 'Package updated successfully' });
+      }
+    }
+  );
+});
+
+// DELETE package
+app.delete('/api/packages/:id', (req, res) => {
+  db.run('DELETE FROM packages WHERE id = ?', [req.params.id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else if (this.changes === 0) {
+      res.status(404).json({ error: 'Package not found' });
+    } else {
+      res.json({ message: 'Package deleted successfully' });
+    }
+  });
+});
+
+// POST add product to package
+app.post('/api/packages/:id/products', (req, res) => {
+  const { product_id, quantity } = req.body;
+  
+  if (!product_id || !quantity || quantity < 1) {
+    return res.status(400).json({ error: 'Invalid product_id or quantity' });
+  }
+  
+  db.run(
+    `INSERT INTO package_products (package_id, product_id, quantity) VALUES (?, ?, ?)
+     ON CONFLICT(package_id, product_id) DO UPDATE SET quantity = excluded.quantity`,
+    [req.params.id, product_id, quantity],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+      } else {
+        res.json({ message: 'Product added to package successfully' });
+      }
+    }
+  );
+});
+
+// PUT update product quantity in package
+app.put('/api/packages/:packageId/products/:productId', (req, res) => {
+  const { quantity } = req.body;
+  
+  if (quantity === undefined || quantity < 1) {
+    return res.status(400).json({ error: 'Invalid quantity' });
+  }
+  
+  db.run(
+    'UPDATE package_products SET quantity = ? WHERE package_id = ? AND product_id = ?',
+    [quantity, req.params.packageId, req.params.productId],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+      } else if (this.changes === 0) {
+        res.status(404).json({ error: 'Product not found in package' });
+      } else {
+        res.json({ message: 'Product quantity updated successfully' });
+      }
+    }
+  );
+});
+
+// DELETE remove product from package
+app.delete('/api/packages/:packageId/products/:productId', (req, res) => {
+  db.run(
+    'DELETE FROM package_products WHERE package_id = ? AND product_id = ?',
+    [req.params.packageId, req.params.productId],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+      } else if (this.changes === 0) {
+        res.status(404).json({ error: 'Product not found in package' });
+      } else {
+        res.json({ message: 'Product removed from package successfully' });
+      }
+    }
+  );
 });
 
 // Start server
